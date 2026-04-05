@@ -2,6 +2,10 @@
 name = "MazeApi"
 version = "0.1.0"
 edition = "2024"
+license = "Apache-2.0"
+description = "A maze generator rest api"
+repository = "https://github.com/EVAPorator-sudo/rust-MazeApi"
+homepage = "https://github.com/EVAPorator-sudo/rust-MazeApi"
 
 [dependencies]
 tokio = { version = "1.51.0", features = ["rt-multi-thread", "macros"] }
@@ -12,3 +16,7 @@ image = "0.25.10"
 
 [lints.rust]
 nonstandard_style = "allow"
+
+[[bin]]
+name = "mazeapi"
+path = "src/main.rs"
