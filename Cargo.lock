@@ -6,6 +6,15 @@ version = 4
 name = "MazeApi"
 version = "0.1.0"
 dependencies = [
+ "MazeGenerator",
+]
+
+[[package]]
+name = "MazeGenerator"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b136624d5ee4b7b611faec76e23b27370bf821184b98b08f5de558b46c65f808"
+dependencies = [
  "image",
  "rand 0.10.0",
  "resvg",
