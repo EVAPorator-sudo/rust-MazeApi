@@ -7,7 +7,13 @@ use MazeGenerator::{
     Solver::{Astar, dijkstra},
 };
 use axum::{Router, extract::Query, http::StatusCode, response::IntoResponse, routing::get};
-use image::{EncodableLayout, ExtendedColorType, ImageEncoder, codecs::png::PngEncoder};
+use image::{
+    EncodableLayout, ExtendedColorType, ImageEncoder,
+    codecs::{
+        bmp::BmpEncoder, gif::GifEncoder, ico::IcoEncoder, jpeg::JpegEncoder, png::PngEncoder,
+        qoi::QoiEncoder, tga::TgaEncoder, webp::WebPEncoder,
+    },
+};
 use serde::Deserialize;
 use tokio::net::TcpListener;
 
@@ -40,7 +46,7 @@ async fn handler(
     Query(params): Query<MazeParameters>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
     let img_extensions = [
-        "png", "jpg", "jpeg", "bmp", "gif", "ico", "tiff", "tif", "webp", "tga", "qoi", "svg",
+        "png", "jpg", "jpeg", "bmp", "gif", "ico", "webp", "tga", "qoi",
     ];
 
     if params.Width > 1000 || params.Height > 1000 {
@@ -129,16 +135,73 @@ async fn handler(
 
     let mut buffer = Vec::new();
 
-    let encoder = PngEncoder::new(&mut buffer);
-    encoder
-        .write_image(&img_bytes, width, height, colour_type)
-        .unwrap();
+    match params.Extension.as_str() {
+        "png" => {
+            let encoder = PngEncoder::new(&mut buffer);
+            encoder
+                .write_image(&img_bytes, width, height, colour_type)
+                .unwrap();
 
-    Ok((
-        StatusCode::OK,
-        [("Content-Type", format!("image/{}", params.Extension))],
-        buffer,
-    ))
+            Ok((StatusCode::OK, [("Content-Type", "image/png")], buffer))
+        }
+        "jpg" | "jpeg" => {
+            let encoder = JpegEncoder::new(&mut buffer);
+            encoder
+                .write_image(&img_bytes, width, height, colour_type)
+                .unwrap();
+
+            Ok((StatusCode::OK, [("Content-Type", "image/jpg")], buffer))
+        }
+        "bmp" => {
+            let encoder = BmpEncoder::new(&mut buffer);
+            encoder
+                .write_image(&img_bytes, width, height, colour_type)
+                .unwrap();
+
+            Ok((StatusCode::OK, [("Content-Type", "image/bmp")], buffer))
+        }
+        "webp" => {
+            let encoder = WebPEncoder::new_lossless(&mut buffer);
+            encoder
+                .write_image(&img_bytes, width, height, colour_type)
+                .unwrap();
+
+            Ok((StatusCode::OK, [("Content-Type", "image/webp")], buffer))
+        }
+        "gif" => {
+            let encoder = GifEncoder::new(&mut buffer);
+            encoder
+                .write_image(&img_bytes, width, height, colour_type)
+                .unwrap();
+
+            Ok((StatusCode::OK, [("Content-Type", "image/gif")], buffer))
+        }
+        "ico" => {
+            let encoder = IcoEncoder::new(&mut buffer);
+            encoder
+                .write_image(&img_bytes, width, height, colour_type)
+                .unwrap();
+
+            Ok((StatusCode::OK, [("Content-Type", "image/ico")], buffer))
+        }
+        "tga" => {
+            let encoder = TgaEncoder::new(&mut buffer);
+            encoder
+                .write_image(&img_bytes, width, height, colour_type)
+                .unwrap();
+
+            Ok((StatusCode::OK, [("Content-Type", "image/tga")], buffer))
+        }
+        "qoi" => {
+            let encoder = QoiEncoder::new(&mut buffer);
+            encoder
+                .write_image(&img_bytes, width, height, colour_type)
+                .unwrap();
+
+            Ok((StatusCode::OK, [("Content-Type", "image/qoi")], buffer))
+        }
+        _ => return Err((StatusCode::BAD_REQUEST, "Encoding failed".to_string())),
+    }
 }
 
 fn ValidCoords(
@@ -176,11 +239,9 @@ fn get_format_limits(extension: &str) -> Option<(u32, u32)> {
         "webp" => Some((16383, 16383)),
         "bmp" => Some((u32::MAX, u32::MAX)),
         "gif" => Some((65535, 65535)),
-        "tiff" | "tif" => Some((u32::MAX, u32::MAX)),
         "ico" => Some((256, 256)),
         "tga" => Some((65535, 65535)),
         "qoi" => Some((u32::MAX, u32::MAX)),
-        "svg" => Some((u32::MAX, u32::MAX)),
         _ => None,
     }
 }
