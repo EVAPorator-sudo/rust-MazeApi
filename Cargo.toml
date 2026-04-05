@@ -1,0 +1,12 @@
+[package]
+name = "MazeApi"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+rand = "0.10.0"
+resvg = "0.47.0"
+image = "0.25.10"
+
+[lints.rust]
+nonstandard_style = "allow"
