@@ -1,4 +1,4 @@
-use std::{io::Cursor, net::SocketAddr};
+use std::net::SocketAddr;
 
 use MazeGenerator::{
     Draw::{grid_draw_img, solve_draw_img},
@@ -7,7 +7,7 @@ use MazeGenerator::{
     Solver::{Astar, dijkstra},
 };
 use axum::{Router, extract::Query, http::StatusCode, response::IntoResponse, routing::get};
-use image::{ColorType, EncodableLayout, ExtendedColorType, ImageEncoder, codecs::png::PngEncoder};
+use image::{EncodableLayout, ExtendedColorType, ImageEncoder, codecs::png::PngEncoder};
 use serde::Deserialize;
 use tokio::net::TcpListener;
 
@@ -22,6 +22,7 @@ struct MazeParameters {
     StartY: Option<usize>,
     EndX: Option<usize>,
     EndY: Option<usize>,
+    Extension: String,
 }
 
 #[tokio::main]
@@ -38,6 +39,24 @@ async fn main() {
 async fn handler(
     Query(params): Query<MazeParameters>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
+    let img_extensions = [
+        "png", "jpg", "jpeg", "bmp", "gif", "ico", "tiff", "tif", "webp", "tga", "qoi", "svg",
+    ];
+
+    if params.Width > 1000 || params.Height > 1000 {
+        return Err((StatusCode::BAD_REQUEST, "Invalid dimensions".to_string()));
+    } else if !img_extensions.contains(&params.Extension.as_str()) {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            "Unsupported file extension".to_string(),
+        ));
+    } else if validate_dimensions(params.Width, params.Height, &params.Extension) {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            "Dimensions exceeed file format limits".to_string(),
+        ));
+    }
+
     let maze = match params.Algorithm {
         'e' => Ellers(Grid::new(params.Width, params.Height)),
         'g' => match params.Weighting {
@@ -115,7 +134,11 @@ async fn handler(
         .write_image(&img_bytes, width, height, colour_type)
         .unwrap();
 
-    Ok((StatusCode::OK, [("Content-Type", "image/png")], buffer))
+    Ok((
+        StatusCode::OK,
+        [("Content-Type", format!("image/{}", params.Extension))],
+        buffer,
+    ))
 }
 
 fn ValidCoords(
@@ -144,4 +167,31 @@ fn ValidCoords(
     check(x2, y2)?;
 
     Ok(())
+}
+
+fn get_format_limits(extension: &str) -> Option<(u32, u32)> {
+    match extension {
+        "png" => Some((u32::MAX, u32::MAX)),
+        "jpg" | "jpeg" => Some((65535, 65535)),
+        "webp" => Some((16383, 16383)),
+        "bmp" => Some((u32::MAX, u32::MAX)),
+        "gif" => Some((65535, 65535)),
+        "tiff" | "tif" => Some((u32::MAX, u32::MAX)),
+        "ico" => Some((256, 256)),
+        "tga" => Some((65535, 65535)),
+        "qoi" => Some((u32::MAX, u32::MAX)),
+        "svg" => Some((u32::MAX, u32::MAX)),
+        _ => None,
+    }
+}
+
+fn validate_dimensions(width: usize, height: usize, extension: &str) -> bool {
+    let img_width = (width * 20 + 2 * 1) as u32;
+    let img_height = (height * 20 + 2 * 1) as u32;
+    let limits = get_format_limits(extension).unwrap();
+
+    if limits.0 < img_width || limits.1 < img_height {
+        return true;
+    }
+    false
 }
