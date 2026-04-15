@@ -1,3 +1,4 @@
+
 use MazeGenerator::{
     Draw::{grid_draw_img, solve_draw_img},
     Generator::{Ellers, Growing_Tree},
@@ -8,8 +9,8 @@ use axum::{Router, extract::Query, http::StatusCode, response::IntoResponse, rou
 use image::{
     EncodableLayout, ExtendedColorType, ImageEncoder,
     codecs::{
-        bmp::BmpEncoder, gif::GifEncoder, ico::IcoEncoder, jpeg::JpegEncoder, png::PngEncoder,
-        qoi::QoiEncoder, tga::TgaEncoder, webp::WebPEncoder,
+        bmp::BmpEncoder, ico::IcoEncoder, jpeg::JpegEncoder, png::PngEncoder,
+        tga::TgaEncoder, webp::WebPEncoder, avif::AvifEncoder
     },
 };
 use serde::Deserialize;
@@ -38,7 +39,7 @@ pub async fn handler(
     Query(params): Query<MazeParameters>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
     let img_extensions = [
-        "png", "jpg", "jpeg", "bmp", "gif", "ico", "webp", "tga", "qoi",
+        "png", "jpg", "jpeg", "bmp", "gif", "ico", "webp", "tga", "qoi", "svg", "avif"
     ];
 
     if params.Width > 1000 || params.Height > 1000 {
@@ -104,6 +105,9 @@ pub async fn handler(
         None => None,
     };
 
+
+
+
     let (img_bytes, colour_type, height, width) = match Solution {
         Some(s) => {
             let img = solve_draw_img(&maze, &s);
@@ -123,6 +127,8 @@ pub async fn handler(
                 img.width(),
             )
         }
+
+
     };
 
     let mut buffer = Vec::new();
@@ -176,6 +182,14 @@ pub async fn handler(
 
             Ok((StatusCode::OK, [("Content-Type", "image/tga")], buffer))
         }
+        "avif" => {
+            let encoder = AvifEncoder::new(&mut buffer);
+            encoder
+                .write_image(&img_bytes, width, height, colour_type)
+                .unwrap();
+
+            Ok((StatusCode::OK, [("Content-Type", "image/avif")], buffer))
+        }
         _ => return Err((StatusCode::BAD_REQUEST, "Encoding failed".to_string())),
     }
 }
@@ -218,6 +232,8 @@ fn get_format_limits(extension: &str) -> Option<(u32, u32)> {
         "ico" => Some((256, 256)),
         "tga" => Some((65535, 65535)),
         "qoi" => Some((u32::MAX, u32::MAX)),
+        "svg" => Some((u32::MAX, u32::MAX)),
+        "avif" => Some((16383, 16383)),
         _ => None,
     }
 }

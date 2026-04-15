@@ -137,6 +137,20 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_avif_format() {
+        let server = server();
+        let q = query_builder(&[
+            ("Width", Some("1")),
+            ("Height", Some("1")),
+            ("Algorithm", Some("e")),
+            ("Extension", Some("avif")),
+        ]);
+        let res = server.get(&format!("/generate?{}", q)).await;
+        res.assert_status_ok();
+        assert_eq!(res.headers()["content-type"], "image/avif");
+    }
+
+    #[tokio::test]
     async fn test_dijkstra() {
         let server = server();
         let q = query_builder(&[
@@ -439,5 +453,18 @@ mod tests {
         let res = server.get(&format!("/generate?{}", q)).await;
         res.assert_status_bad_request();
     }
-}
 
+    #[tokio::test]
+    async fn test_avif_dimensions_over_limit() {
+        // AVIF max is 16383x16383. 820x820 = 16402 px.
+        let server = server();
+        let q = query_builder(&[
+            ("Width", Some("820")),
+            ("Height", Some("820")),
+            ("Algorithm", Some("e")),
+            ("Extension", Some("avif")),
+        ]);
+        let res = server.get(&format!("/generate?{}", q)).await;
+        res.assert_status_bad_request();
+    }
+}
