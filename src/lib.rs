@@ -1,7 +1,6 @@
-
 use MazeGenerator::{
     Draw::{grid_draw_img, solve_draw_img},
-    Generator::{Ellers, Growing_Tree},
+    Generator::{Growing_Tree, multi_thread_ellers},
     Maze::Grid::Grid,
     Solver::{Astar, dijkstra},
 };
@@ -9,8 +8,8 @@ use axum::{Router, extract::Query, http::StatusCode, response::IntoResponse, rou
 use image::{
     EncodableLayout, ExtendedColorType, ImageEncoder,
     codecs::{
-        bmp::BmpEncoder, ico::IcoEncoder, jpeg::JpegEncoder, png::PngEncoder,
-        tga::TgaEncoder, webp::WebPEncoder, avif::AvifEncoder
+        avif::AvifEncoder, bmp::BmpEncoder, ico::IcoEncoder, jpeg::JpegEncoder, png::PngEncoder,
+        tga::TgaEncoder, webp::WebPEncoder,
     },
 };
 use serde::Deserialize;
@@ -39,7 +38,7 @@ pub async fn handler(
     Query(params): Query<MazeParameters>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
     let img_extensions = [
-        "png", "jpg", "jpeg", "bmp", "gif", "ico", "webp", "tga", "qoi", "svg", "avif"
+        "png", "jpg", "jpeg", "bmp", "gif", "ico", "webp", "tga", "qoi", "svg", "avif",
     ];
 
     if params.Width > 1000 || params.Height > 1000 {
@@ -57,7 +56,7 @@ pub async fn handler(
     }
 
     let maze = match params.Algorithm {
-        'e' => Ellers(Grid::new(params.Width, params.Height)),
+        'e' => multi_thread_ellers(Grid::new(params.Width, params.Height)),
         'g' => match params.Weighting {
             Some(w) => Growing_Tree(Grid::new(params.Width, params.Height), w),
             None => {
@@ -105,9 +104,6 @@ pub async fn handler(
         None => None,
     };
 
-
-
-
     let (img_bytes, colour_type, height, width) = match Solution {
         Some(s) => {
             let img = solve_draw_img(&maze, &s);
@@ -127,8 +123,6 @@ pub async fn handler(
                 img.width(),
             )
         }
-
-
     };
 
     let mut buffer = Vec::new();
